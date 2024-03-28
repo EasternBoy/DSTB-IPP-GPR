@@ -1,4 +1,5 @@
-# DSTB-INFO-PP-GP
+# DSTB-IPP-GPR
+# RAL2024
 Distributed Informative Path Planning by Gaussian Process Regression
 
 Code for paper "Connectivity-Preserving Distributed Informative Path Planning for Mobile Robot Networks," in IEEE Robotics and Automation Letters, vol. 9, no. 3, pp. 2949-2956. 
