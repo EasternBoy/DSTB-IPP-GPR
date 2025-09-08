@@ -1,11 +1,20 @@
 # Distributed Informative Path Planning by Gaussian Process Regression
 
-## Code for paper "Connectivity-Preserving Distributed Informative Path Planning for Mobile Robot Networks," in IEEE Robotics and Automation Letters, vol. 9, no. 3, pp. 2949-2956. 
+## Overview
+This repository contains the source code for the paper:  
+**"Connectivity-Preserving Distributed Informative Path Planning for Mobile Robot Networks,"**  
+published in *IEEE Robotics and Automation Letters*, vol. 9, no. 3, pp. 2949–2956.
 
-These codes were written in Julia 1.8.5.
+## Requirements
+- **Programming Language:** Julia 1.8.5
 
-There were two scenarios including 10 robots in 200[m]x200[m] and 25 robots in 400[m]x400[m].
+## Scenarios
+Two simulation scenarios are provided:
+1. **10 robots** in a **200 m × 200 m** environment  
+   Run: `sim10robots200.jl`
+2. **25 robots** in a **400 m × 400 m** environment  
+   Run: `sim25robots400.jl`
 
-Run "sim10robots200.jl" for the first scenario and "sim25robots400.jl" for the second scenario.
-
-We accelerate the computation by distributed computing, please define the number of workers appropriate to your computational resources by variable "nP" in the above files.
+## Notes on Computation
+The simulations leverage **distributed computing** to improve performance.  
+Please set the number of workers according to your computational resources by adjusting the variable **`nP`** in the simulation files above.
