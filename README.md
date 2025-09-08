@@ -7,6 +7,7 @@ published in *IEEE Robotics and Automation Letters*, vol. 9, no. 3, pp. 2949–2
 
 ## Requirements
 - **Programming Language:** Julia 1.8.5
+- **GaussianProcess.jl**
 
 ## Scenarios
 Two simulation scenarios are provided:
