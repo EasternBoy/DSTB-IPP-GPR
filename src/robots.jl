@@ -46,7 +46,7 @@ mutable struct robot
         obj         = new(index,T, H, R, r, σ, pBnd)
         obj.posn    = x0  # Copy x0
         
-        obj.data    = [-ones(3) for i in 1:M, j in 1:L+1] # -1 means no data
+        obj.data    = [-ones(3) for i in 1:M, j in 1:n_steps+1] # -1 means no data
         obj.loca    = Matrix{Float64}(undef, length(x0), 0)
         obj.obsr    = Vector{Float64}(undef, 0)
 

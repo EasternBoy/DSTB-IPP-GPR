@@ -8,16 +8,17 @@ published in *IEEE Robotics and Automation Letters*, vol. 9, no. 3, pp. 2949–2
 ## Requirements
 - **Programming Language:** Julia 1.8.5
 - **GaussianProcess.jl** 0.12.5
+- **LinearAlgebra v1.12.0**
 
 ## Scenarios
 Two simulation scenarios are provided:
 1. **10 robots** in a **200 m × 200 m** environment  
-   Run: `sim10robots200.jl`
+   Set M = 10 and run: `main.jl`
 2. **25 robots** in a **400 m × 400 m** environment  
-   Run: `sim25robots400.jl`
+   Set M = 25 and run: `main.jl`
 
 ## Notes on Computation
-The simulations leverage **distributed computing** to improve performance.  
+src/parallel-computing leverages **distributed computing** to improve performance.  
 Please set the number of workers according to your computational resources by adjusting the variable **`nP`** in the simulation files above.
 
 

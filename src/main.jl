@@ -1,6 +1,13 @@
 push!(LOAD_PATH, ".")
 
-M  = 10; T = 1.0; H = 3; L = 40; MAX_ITER = 100
+M  = 10; T = 1.0; H = 3; n_steps = 40; MAX_ITER = 100
+x_min =  0.; x_max = 200.
+y_min =  0.; y_max = 200.
+if M > 10 
+    x_max = 400.
+    y_max = 400.
+    n_steps = 30
+end
 
 
 import Pkg
@@ -11,7 +18,7 @@ Pkg.activate(@__DIR__)
 
 using Optim, Random, Distributions, CSV, DataFrames, MAT, JLD2
 using Plots, Dates,  Statistics, Colors, ColorSchemes, StatsPlots
-using Ipopt, JuMP, GaussianProcesses, LinearAlgebra, Optim
+using Ipopt, JuMP,   GaussianProcesses,  LinearAlgebra
 
 # Resolve method ambiguity between GaussianProcesses and PDMats for current dependency versions.
 LinearAlgebra.ldiv!(A::GaussianProcesses.PDMats.PDMat, B::LinearAlgebra.AbstractVecOrMat) =
@@ -26,8 +33,6 @@ include("connectivity.jl")
 
 ENV["GKSwstype"]="nul"
 
-x_min =  0.; x_max = 200.
-y_min =  0.; y_max = 200.
 color =  cgrad(:turbo, M, categorical = true, scale = :lin)
 
 
@@ -80,17 +85,17 @@ png(Fig0, "media/figs/GroudTruth")
 
 ## Run simulation
 println("Now start the simulation")
-timer        = zeros(L)
+timer        = zeros(n_steps)
 Pred         = zeros(inDim, H, M)
-J            = ones(M, L)
-Eig2         = zeros(L)
-RMSE         = zeros(M,L)
-ResE         = ones(MAX_ITER, M, L)
+J            = ones(M, n_steps)
+Eig2         = zeros(n_steps)
+RMSE         = zeros(M,n_steps)
+ResE         = ones(MAX_ITER, M, n_steps)
 [Pred[:,h,i] = robo[i].posn for h in 1:H, i in 1:M]
 
 # random_move!(robo, mGP, GPtruth)
 
-for k in 1:L
+for k in 1:n_steps
     println("Time instance $k")
     global Pred, J, ResE, NB
 
@@ -105,7 +110,7 @@ for k in 1:L
     pserSet = pserCon(robo, J[:, (k>1) ? k-1 : 1])
 
     Fig, RMSE[:,k] = myPlot(robo, mGP, vectemp, testSize, NB, color)
-    png(Fig, "media/figs/10robots-step $k"); #display(Fig)
+    png(Fig, string("media/figs/$M-robots-map-step-$k")); #display(Fig)
 
     # Execute PxADMM
     t0 = time_ns()
@@ -127,22 +132,22 @@ function nonzero(A::Vector{Float64}, value::Float64)
 end
 
 gr(size=(1000,600))
-FigRMSE = errorline(1:L, RMSE[:,1:L], linestyles = :solid, linewidth=2, secondarylinewidth=2, xlims = (0,L+0.5), errorstyle=:stick, 
+FigRMSE = errorline(1:n_steps, RMSE[:,1:n_steps], linestyles = :solid, linewidth=2, secondarylinewidth=2, xlims = (0,n_steps+0.5), errorstyle=:stick, 
 secondarycolor=:blue,  legendfontsize = 16, tickfontsize = 20, framestyle = :box, label = "")
-# errorline!(1:L, RMSE, linestyles = :solid, linewidth=2, xlims = (0,L+0.5), errorstyle=:ribbon, label="")
-scatter!(1:L, [mean(RMSE[:,i]) for i in 1:L], label="Mean Errors")
-png(FigRMSE, "media/figs/10robots-RMSE")
+# errorline!(1:n_steps, RMSE, linestyles = :solid, linewidth=2, xlims = (0,n_steps+0.5), errorstyle=:ribbon, label="")
+scatter!(1:n_steps, [mean(RMSE[:,i]) for i in 1:n_steps], label="Mean Errors")
+png(FigRMSE, string("media/figs/$M-robots-RMSE"))
 
 pResE    = zeros(M,MAX_ITER)
-[pResE[i,:] = sum(ResE[:,i,k] for k in 1:L)/L for i in 1:M]
+[pResE[i,:] = sum(ResE[:,i,k] for k in 1:n_steps)/n_steps for i in 1:M]
 id       = minimum([nonzero(pResE[i,:],0.) for i in 1:M]) - 7
 FigpResE = errorline(1:id, pResE[:,1:id], secondarylinewidth=2, secondarycolor=:blue, errorstyle=:stick, framestyle = :box, yticks = 10 .^(-3.:1.:2.), label = "",
             legendfontsize = 16, tickfontsize = 20, xlims = (0, id-0.5), ylims = (1e-3, 2e2),  yscale=:log10, linestyles = :solid, linewidth=2)
 scatter!(1:id, [mean(pResE[:,k]) for k in 1:id], label="Mean Errors")
-png(FigpResE, "media/figs/10robots-ResE")
+png(FigpResE, string("media/figs/$M-robots-ResE"))
 
-png(plot(1:L, Eig2[1:L], linestyles = :dot, linewidth=3, xlims = (0,L+0.5), ylims = (0, 1.1*maximum(Eig2)), 
-                tickfontsize = 20, markershape = :circle, markersize = 5, label="", framestyle = :box), "media/figs/10robots-Eig2")
+png(plot(1:n_steps, Eig2[1:n_steps], linestyles = :dot, linewidth=3, xlims = (0,n_steps+0.5), ylims = (0, 1.1*maximum(Eig2)), 
+                tickfontsize = 20, markershape = :circle, markersize = 5, label="", framestyle = :box), string("media/figs/$M-robots-Eig2"))
 
 matwrite("data/Data10robo200.mat", Dict("RMSE" => RMSE, "ResE" => ResE, "Eig2" => Eig2))
 save_object("data/10robots.jld2", robo)
