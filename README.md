@@ -19,3 +19,7 @@ Two simulation scenarios are provided:
 ## Notes on Computation
 The simulations leverage **distributed computing** to improve performance.  
 Please set the number of workers according to your computational resources by adjusting the variable **`nP`** in the simulation files above.
+
+
+## Simulation results for 4, 10, and 25 robots
+[YouTube demo video](https://www.youtube.com/watch?v=OhAIk5bYg74)

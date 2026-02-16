@@ -88,16 +88,14 @@ function myPlot(robo::Vector{robot}, mGP::Vector{GPBase}, vecTruth::Vector{Float
     test     = meshgrid(hor_gr, ver_gr)
 
     
-    RMSE   = SharedArray(zeros(M))
-    rch    = RemoteChannel(()->Channel{Vector{Float64}}(20))
-    pmap(1:M) do i
+    RMSE      = zeros(M)
+    vecTemEst = nothing
+    for i in 1:M
         vecTemEst = myGP_predict(robo[i].mGP, test)[1]
         RMSE[i]   = sqrt((vecTruth-vecTemEst)'*(vecTruth-vecTemEst)/(length(vecTruth)))
-        if i == 1 put!(rch, vecTemEst) end
     end
 
-    vecTemEst = take!(rch)
-    TemEst = reshape(vecTemEst, testSize[1], testSize[2])'
+    TemEst    = reshape(vecTemEst, testSize[1], testSize[2])'
     gr(size=(700,600))
     Fig    = heatmap(hor_gr, ver_gr, TemEst, c = :turbo, xlims = (x_min,x_max), ylims = (y_min,y_max), aspect_ratio = 1, 
                                           tickfontsize = 16, clim = (2.5, 6.5))

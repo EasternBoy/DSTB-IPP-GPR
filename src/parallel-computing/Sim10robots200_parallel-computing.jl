@@ -15,6 +15,9 @@ using Plots, Dates,  Statistics, Colors, ColorSchemes, StatsPlots
 
 @everywhere begin
     using  SharedArrays, Ipopt, JuMP, GaussianProcesses, LinearAlgebra, Optim
+    # Resolve method ambiguity between GaussianProcesses and PDMats for current dependency versions.
+    LinearAlgebra.ldiv!(A::GaussianProcesses.PDMats.PDMat, B::LinearAlgebra.AbstractVecOrMat) =
+        LinearAlgebra.ldiv!(A.chol, B)
 end
 
 @everywhere include("robots.jl")

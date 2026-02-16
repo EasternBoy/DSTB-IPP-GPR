@@ -1,36 +1,38 @@
 push!(LOAD_PATH, ".")
-using  Distributed
 
-M  = 25; T = 1.0; H = 3; L = 30; MAX_ITER = 100
-nP = M
-nW = nworkers()
-(nP+1 > nW) ? addprocs(nP-nW+1) : nothing 
+M  = 10; T = 1.0; H = 3; L = 40; MAX_ITER = 100
+
 
 import Pkg
-@everywhere using Pkg
-@everywhere Pkg.activate(@__DIR__)
+using Pkg
+Pkg.activate(@__DIR__)
+
+# Pkg.instantiate() # run this line if you haven't installed the packages yet (first time running the code)
 
 using Optim, Random, Distributions, CSV, DataFrames, MAT, JLD2
 using Plots, Dates,  Statistics, Colors, ColorSchemes, StatsPlots
+using Ipopt, JuMP, GaussianProcesses, LinearAlgebra, Optim
 
-@everywhere begin
-    using  SharedArrays, Ipopt, JuMP, GaussianProcesses, LinearAlgebra, Optim
-end
+# Resolve method ambiguity between GaussianProcesses and PDMats for current dependency versions.
+LinearAlgebra.ldiv!(A::GaussianProcesses.PDMats.PDMat, B::LinearAlgebra.AbstractVecOrMat) =
+    LinearAlgebra.ldiv!(A.chol, B)
+LinearAlgebra.ldiv!(A::GaussianProcesses.ElasticPDMats.ElasticPDMat, B::LinearAlgebra.AbstractVecOrMat) =
+    LinearAlgebra.ldiv!(A.chol, B)
 
-@everywhere include("robots.jl")
+include("robots.jl")
 include("computing.jl")
 include("pxadmm.jl")
 include("connectivity.jl")
 
 ENV["GKSwstype"]="nul"
 
-x_min =  0.; x_max = 400.
-y_min =  0.; y_max = 400.
+x_min =  0.; x_max = 200.
+y_min =  0.; y_max = 200.
 color =  cgrad(:turbo, M, categorical = true, scale = :lin)
 
 
 ## Load data
-df   = CSV.read("SOM.csv", DataFrame, header = 0)
+df   = CSV.read("data/SOM.csv", DataFrame, header = 0)
 data = Matrix{Float64}(df)
 loca_train    = Matrix(data[:,1:2]') 
 obsr_train    = data[:,end]
@@ -41,11 +43,11 @@ GPtruth       = GPE(loca_train, obsr_train,
                     MeanConst(Statistics.mean(obsr_train)), 
                     SEArd(ones(inDim), 1/2*log(Statistics.var(obsr_train))),
                    -2.)
-GaussianProcesses.optimize!(GPtruth, domean = true, kern = true, noise = true)
+GaussianProcesses.optimize!(GPtruth, domean = true, kern = true, noise = true; method = Optim.NelderMead())
 println([-log.(GPtruth.kernel.iℓ2)/2; log(GPtruth.kernel.σ2)/2; GPtruth.logNoise.value])
 
 
-s_max = 20.; R = 80.; r = 6.
+s_max = 10.; R = 40.; r = 3.
 pBounds  = polyBound(s_max, x_min, x_max, y_min, y_max)
 
 
@@ -70,7 +72,7 @@ temp     = reshape(vectemp, testSize[1], testSize[2])'
 gr(size=(700,600))
 Fig0 = heatmap(hor_gr, ver_gr,  temp, c = :turbo, aspect_ratio = 1, tickfontsize = 16, 
                                 clim =(2.5, 6.5), label = "", xlims = (x_min,x_max), ylims = (y_min,y_max))
-png(Fig0, "Fig-25robots-400/GroundTruth")
+png(Fig0, "media/figs/GroudTruth")
 
 
 
@@ -103,7 +105,7 @@ for k in 1:L
     pserSet = pserCon(robo, J[:, (k>1) ? k-1 : 1])
 
     Fig, RMSE[:,k] = myPlot(robo, mGP, vectemp, testSize, NB, color)
-    png(Fig, "Fig-25robots-400/step $k"); #display(Fig)
+    png(Fig, "media/figs/10robots-step $k"); #display(Fig)
 
     # Execute PxADMM
     t0 = time_ns()
@@ -116,7 +118,6 @@ for k in 1:L
         robo[i].posn = Pred[:,1,i]
         robo[i].meas = measure!(robo[i].posn, GPtruth)
     end
-
     Distributed.clear!(CachingPool(workers()))
 end
 
@@ -130,7 +131,7 @@ FigRMSE = errorline(1:L, RMSE[:,1:L], linestyles = :solid, linewidth=2, secondar
 secondarycolor=:blue,  legendfontsize = 16, tickfontsize = 20, framestyle = :box, label = "")
 # errorline!(1:L, RMSE, linestyles = :solid, linewidth=2, xlims = (0,L+0.5), errorstyle=:ribbon, label="")
 scatter!(1:L, [mean(RMSE[:,i]) for i in 1:L], label="Mean Errors")
-png(FigRMSE, "Fig-25robots-400/RMSE")
+png(FigRMSE, "media/figs/10robots-RMSE")
 
 pResE    = zeros(M,MAX_ITER)
 [pResE[i,:] = sum(ResE[:,i,k] for k in 1:L)/L for i in 1:M]
@@ -138,12 +139,10 @@ id       = minimum([nonzero(pResE[i,:],0.) for i in 1:M]) - 7
 FigpResE = errorline(1:id, pResE[:,1:id], secondarylinewidth=2, secondarycolor=:blue, errorstyle=:stick, framestyle = :box, yticks = 10 .^(-3.:1.:2.), label = "",
             legendfontsize = 16, tickfontsize = 20, xlims = (0, id-0.5), ylims = (1e-3, 2e2),  yscale=:log10, linestyles = :solid, linewidth=2)
 scatter!(1:id, [mean(pResE[:,k]) for k in 1:id], label="Mean Errors")
-png(FigpResE, "Fig-25robots-400/ResE")
+png(FigpResE, "media/figs/10robots-ResE")
 
-                
 png(plot(1:L, Eig2[1:L], linestyles = :dot, linewidth=3, xlims = (0,L+0.5), ylims = (0, 1.1*maximum(Eig2)), 
-                tickfontsize = 20, markershape = :circle, markersize = 5, label="", framestyle = :box), "Fig-25robots-400/Eig2")
+                tickfontsize = 20, markershape = :circle, markersize = 5, label="", framestyle = :box), "media/figs/10robots-Eig2")
 
-matwrite("Data25robo400.mat", Dict("RMSE" => RMSE, "ResE" => ResE, "Eig2" => Eig2))
-save_object("25robots.jld2", robo)
-
+matwrite("data/Data10robo200.mat", Dict("RMSE" => RMSE, "ResE" => ResE, "Eig2" => Eig2))
+save_object("data/10robots.jld2", robo)
